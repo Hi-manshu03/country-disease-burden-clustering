@@ -1,0 +1,37 @@
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Streamlit secrets & local settings
+.streamlit/secrets.toml
+
+# Environment variables & credentials
+.env
+*.env
+*.pem
+*.key
+
+# Data & raw datasets
+data/raw/
+data/private/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+data/processed/
+
+data/processed/
