@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 import streamlit as st
+from pathlib import Path
 
 from src.data import prepare_features, validate_dataset
 from src.clustering import evaluate_kmeans, evaluate_kmedians, compute_cluster_profiles
@@ -15,8 +16,42 @@ from src.visualization import (
 
 st.set_page_config(page_title="Country Disease-Burden Clustering", page_icon="🌍", layout="wide")
 
-st.title("Country Disease-Burden Pattern Clustering")
-st.caption("Unsupervised public-health analysis • Project 28")
+# Load custom application stylesheet
+css_path = Path(__file__).parent / "assets" / "style.css"
+
+if css_path.exists():
+    css = css_path.read_text(encoding="utf-8")
+    st.markdown(
+        f"<style>{css}</style>",
+        unsafe_allow_html=True
+    )
+else:
+    st.warning("Custom stylesheet not found.")
+
+# st.title("Country Disease-Burden Pattern Clustering")
+# st.caption("Unsupervised public-health analysis • Project 28")
+
+
+st.markdown(
+    """
+<div class="project-header">
+<div class="project-eyebrow">PROJECT 28 · PUBLIC HEALTH INTELLIGENCE</div>
+<h1 class="project-title">Country Disease-Burden Pattern Clustering</h1>
+<p class="project-description">
+Explore global disease-burden patterns using unsupervised machine learning.
+Analyze similarities between countries, evaluate clustering quality, and
+discover meaningful statistical patterns in public-health indicators.
+</p>
+<div class="project-meta">
+IHME GLOBAL BURDEN OF DISEASE 2023
+&nbsp; | &nbsp; K-MEANS · K-MEDIANS · PCA
+</div>
+</div>
+    """,
+    unsafe_allow_html=True
+)
+
+
 
 st.warning(
     "Use verified, documented IHME indicators for final results. "

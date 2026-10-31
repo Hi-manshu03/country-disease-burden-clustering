@@ -1,0 +1,72 @@
+/* =========================================
+   PROJECT 28 — TRANSPARENT DASHBOARD LAYER
+   ========================================= */
+
+/* Main application layers */
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+.main,
+.block-container {
+    background: transparent !important;
+}
+
+/* Dark overlay to preserve readability */
+.stApp {
+    background-image:
+        linear-gradient(
+            rgba(8, 10, 12, 0.48),
+            rgba(8, 10, 12, 0.68)
+        ),
+        url("/app/static/dashboard-bg.png") !important;
+
+    background-size: cover !important;
+    background-position: center top !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+}
+
+/* Header panel */
+.project-header {
+    background: rgba(20, 24, 29, 0.64) !important;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+}
+
+/* Content panels */
+[data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stMetric"] {
+    background: rgba(22, 27, 32, 0.66) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* File uploader */
+[data-testid="stFileUploader"] {
+    background: rgba(25, 29, 34, 0.68) !important;
+    border: 1px dashed rgba(214, 170, 88, 0.45);
+    border-radius: 12px;
+}
+
+/* Warning and information messages */
+[data-testid="stAlert"] {
+    background: rgba(32, 35, 32, 0.82) !important;
+    border: 1px solid rgba(214, 170, 88, 0.25);
+    backdrop-filter: blur(8px);
+    border-radius: 10px;
+}
+
+/* Input controls */
+[data-baseweb="select"] > div,
+[data-baseweb="input"] > div {
+    background: rgba(24, 29, 34, 0.90) !important;
+}
+
+/* Keep text readable */
+h1, h2, h3, p, label {
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
