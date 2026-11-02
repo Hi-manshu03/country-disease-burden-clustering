@@ -43,6 +43,20 @@ from plotly.subplots import make_subplots
 from sklearn.decomposition import PCA
 
 
+def _apply_dashboard_theme(fig: go.Figure) -> go.Figure:
+    fig.update_layout(
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(12,15,19,0.38)",
+        font=dict(color="#F2F0EB", family="Inter, sans-serif"),
+        title_font=dict(color="#F2F0EB"),
+        legend=dict(font=dict(color="#D7D8DA")),
+    )
+    fig.update_xaxes(gridcolor="rgba(165,169,176,0.15)", zerolinecolor="rgba(165,169,176,0.25)")
+    fig.update_yaxes(gridcolor="rgba(165,169,176,0.15)", zerolinecolor="rgba(165,169,176,0.25)")
+    return fig
+
+
 # ── PCA fitting helper ────────────────────────────────────────────────────────
 
 def fit_pca(X: np.ndarray, n_components: int | None = None) -> tuple[PCA, np.ndarray]:
@@ -155,9 +169,10 @@ def make_pca_figure(
             "<br><sup>Clustering was performed on all selected features, not on these two axes.</sup>"
         ),
         labels={"cluster": "Cluster"},
+        color_discrete_sequence=["#D6AA58", "#B58A3B", "#78A88B", "#A5A9B0", "#F2F0EB"],
     )
     fig.update_layout(legend_title_text="Cluster", margin=dict(l=20, r=20, t=70, b=20))
-    return fig
+    return _apply_dashboard_theme(fig)
 
 
 # ── Scree plot ────────────────────────────────────────────────────────────────
@@ -253,7 +268,7 @@ def make_scree_figure(pca_model: PCA) -> go.Figure:
         margin=dict(l=40, r=30, t=90, b=50),
         height=370,
     )
-    return fig
+    return _apply_dashboard_theme(fig)
 
 
 # ── Evaluation curves ─────────────────────────────────────────────────────────
@@ -308,7 +323,7 @@ def make_evaluation_curves(metrics_df: pd.DataFrame, algorithm: str = "K-Means (
             else metrics_df["wcss_inertia"].tolist()
         )
         fig.add_trace(
-            go.Scatter(x=k, y=y_elbow, name="Objective", line=dict(color="#4F8EF7"), **marker_kwargs),
+            go.Scatter(x=k, y=y_elbow, name="Objective", line=dict(color="#D6AA58"), **marker_kwargs),
             row=1, col=col,
         )
         fig.update_xaxes(title_text="k (clusters)", row=1, col=col)
@@ -318,7 +333,7 @@ def make_evaluation_curves(metrics_df: pd.DataFrame, algorithm: str = "K-Means (
     if has_silhouette:
         y_sil = metrics_df["silhouette_score"].tolist()
         fig.add_trace(
-            go.Scatter(x=k, y=y_sil, name="Silhouette", line=dict(color="#34C48A"), **marker_kwargs),
+            go.Scatter(x=k, y=y_sil, name="Silhouette", line=dict(color="#78A88B"), **marker_kwargs),
             row=1, col=col,
         )
         fig.update_xaxes(title_text="k (clusters)", row=1, col=col)
@@ -328,7 +343,7 @@ def make_evaluation_curves(metrics_df: pd.DataFrame, algorithm: str = "K-Means (
     if has_db:
         y_db = metrics_df["davies_bouldin_index"].tolist()
         fig.add_trace(
-            go.Scatter(x=k, y=y_db, name="Davies-Bouldin", line=dict(color="#F76B4F"), **marker_kwargs),
+            go.Scatter(x=k, y=y_db, name="Davies-Bouldin", line=dict(color="#B58A3B"), **marker_kwargs),
             row=1, col=col,
         )
         fig.update_xaxes(title_text="k (clusters)", row=1, col=col)
@@ -340,7 +355,7 @@ def make_evaluation_curves(metrics_df: pd.DataFrame, algorithm: str = "K-Means (
         margin=dict(l=40, r=20, t=80, b=40),
         height=350,
     )
-    return fig
+    return _apply_dashboard_theme(fig)
 
 
 # ── PCA loadings ──────────────────────────────────────────────────────────────
@@ -418,13 +433,13 @@ def make_pca_loadings_figure(
             barmode="group",
             orientation="h",
             title="PCA Component Coefficients (PC1 and PC2)",
-            color_discrete_sequence=["#4F8EF7", "#34C48A"],
+            color_discrete_sequence=["#D6AA58", "#78A88B"],
         )
         fig.update_layout(
             margin=dict(l=20, r=20, t=60, b=20),
             height=max(300, 30 * len(feature_names) + 80),
         )
-        return fig
+        return _apply_dashboard_theme(fig)
 
     # Heatmap for three or more components
     display_comps = min(n_comp, max_components_heatmap)
@@ -467,4 +482,42 @@ def make_pca_loadings_figure(
         margin=dict(l=20, r=20, t=70, b=40),
         height=max(350, 30 * len(feature_names) + 120),
     )
-    return fig
+    return _apply_dashboard_theme(fig)
+
+
+def make_cluster_profile_figure(
+    profile_df: pd.DataFrame,
+    feature_name: str,
+) -> go.Figure:
+    """Compare original-scale feature means and medians across clusters."""
+    feature_data = profile_df.loc[profile_df["feature"] == feature_name].sort_values("cluster")
+    if feature_data.empty:
+        raise ValueError(f"No cluster profile is available for feature '{feature_name}'.")
+
+    fig = go.Figure()
+    fig.add_bar(
+        x=feature_data["cluster"].astype(str),
+        y=feature_data["mean"],
+        name="Mean",
+        marker_color="#D6AA58",
+        error_y=dict(
+            type="data",
+            array=feature_data["std"].fillna(0).tolist(),
+            visible=True,
+        ),
+    )
+    fig.add_scatter(
+        x=feature_data["cluster"].astype(str),
+        y=feature_data["median"],
+        name="Median",
+        mode="markers",
+        marker=dict(color="#78A88B", size=11, symbol="diamond"),
+    )
+    fig.update_layout(
+        title=f"{feature_name} by cluster (original values)",
+        xaxis_title="Cluster",
+        yaxis_title=feature_name,
+        margin=dict(l=20, r=20, t=60, b=30),
+        height=360,
+    )
+    return _apply_dashboard_theme(fig)

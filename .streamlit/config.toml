@@ -3,5 +3,13 @@ headless = true
 maxUploadSize = 25
 enableStaticServing = true
 
+[theme]
+base = "dark"
+primaryColor = "#D6AA58"
+backgroundColor = "#0B0E12"
+secondaryBackgroundColor = "#15191F"
+textColor = "#F2F0EB"
+font = "sans serif"
+
 [browser]
 gatherUsageStats = false

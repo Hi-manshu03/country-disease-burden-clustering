@@ -114,38 +114,36 @@ def transform_gbd_long_to_wide(
 
     df = long_df.copy()
 
-    # 2. Filter by Measure and Metric if columns present
-    if "measure_name" in df.columns:
-        # Match 'DALYs (Disability-Adjusted Life Years)' or 'DALYs'
-        daly_mask = df["measure_name"].astype(str).str.contains("DALY", case=False, na=False)
-        if daly_mask.any():
-            df = df.loc[daly_mask]
+    # 2. Filter dimensions when present. A present but mismatched dimension is
+    # an invalid input, not a reason to silently keep incomparable records.
+    dimension_filters = {
+        "measure_name": lambda values: values.str.contains("DALY", case=False, na=False),
+        "metric_name": lambda values: values.str.lower().eq("rate"),
+        "sex_name": lambda values: values.str.lower().eq("both"),
+        "age_name": lambda values: values.str.contains("age-standardized", case=False, na=False),
+    }
+    for column, matches in dimension_filters.items():
+        if column not in df.columns:
+            continue
+        values = df[column].astype("string").str.strip()
+        mask = matches(values)
+        if not mask.any():
+            raise ValueError(
+                f"No records match the required GBD {column} dimension "
+                f"for this analysis."
+            )
+        df = df.loc[mask]
 
-    if "metric_name" in df.columns:
-        # Target 'Rate'
-        rate_mask = df["metric_name"].astype(str).str.strip().str.lower() == "rate"
-        if rate_mask.any():
-            df = df.loc[rate_mask]
-
-    if "sex_name" in df.columns:
-        # Target 'Both'
-        sex_mask = df["sex_name"].astype(str).str.strip().str.lower() == "both"
-        if sex_mask.any():
-            df = df.loc[sex_mask]
-
-    if "age_name" in df.columns:
-        # Target 'Age-standardized'
-        age_mask = df["age_name"].astype(str).str.contains("age-standardized", case=False, na=False)
-        if age_mask.any():
-            df = df.loc[age_mask]
-
-    # 3. Filter Target Year if specified
-    if target_year is not None and "year" in df.columns:
-        df = df.loc[df["year"] == target_year]
-    elif "year" in df.columns and df["year"].nunique() > 1:
-        # If multiple years present and target_year not specified, take the maximum year
-        max_year = int(df["year"].max())
-        df = df.loc[df["year"] == max_year]
+    # 3. Use the explicitly requested year, or the latest year by default.
+    if target_year is not None and "year" not in df.columns:
+        raise ValueError("A target year was requested, but the GBD file has no 'year' column.")
+    if "year" in df.columns:
+        years = pd.to_numeric(df["year"], errors="coerce")
+        if years.isna().any():
+            raise ValueError("The GBD 'year' column contains missing or invalid values.")
+        if target_year is None:
+            target_year = int(years.max())
+        df = df.loc[years == int(target_year)]
 
     if df.empty:
         raise ValueError("No records remain after applying standard GBD dimension filters.")
@@ -180,8 +178,8 @@ def transform_gbd_long_to_wide(
             "Check for unharmonized age groups, sexes, or multi-year slices."
         )
 
-    # 7. Convert val to numeric, coercing invalid values to NaN
-    df["val"] = pd.to_numeric(df["val"].replace([np.inf, -np.inf], np.nan), errors="coerce")
+    # 7. Convert estimates to numeric, explicitly treating invalid values as missing.
+    df["val"] = pd.to_numeric(df["val"], errors="coerce").replace([np.inf, -np.inf], np.nan)
 
     # 8. Pivot Long to Wide
     wide = df.pivot(index="location_name", columns="cause_name", values="val")
@@ -198,4 +196,3 @@ def transform_gbd_long_to_wide(
         raise ValueError(f"Fewer than two disease features present in transformed dataset (got {len(feature_cols)}).")
 
     return wide
-

@@ -28,12 +28,12 @@ def test_clustering_result_persistence_on_rerun():
     at.button[0].click().run()
     # Now there are 2 selectboxes: algorithm_choice (0) + selected_k_solution (1)
     assert len(at.selectbox) == 2
-    assert len(at.download_button) == 2
+    assert len(at.download_button) == 5
 
     # Rerun app without re-clicking button
     at.run()
     assert len(at.selectbox) == 2
-    assert len(at.download_button) == 2
+    assert len(at.download_button) == 5
     assert "clustering_result" in at.session_state
 
 
@@ -49,7 +49,7 @@ def test_change_selected_cluster_k():
     # Switch to k = 3
     at.selectbox[1].select(3).run()
     assert at.selectbox[1].value == 3
-    assert len(at.download_button) == 2
+    assert len(at.download_button) == 5
     assert at.session_state["selected_k_solution"] == 3
 
 
@@ -62,12 +62,12 @@ def test_download_buttons_persist_and_contain_data():
     # Click first download button (cluster assignments)
     at.download_button[0].click().run()
     assert len(at.selectbox) == 2  # algorithm_choice + selected_k_solution
-    assert len(at.download_button) == 2
+    assert len(at.download_button) == 5
 
-    # Click second download button (metrics)
-    at.download_button[1].click().run()
+    # Click evaluation metrics download
+    at.download_button[2].click().run()
     assert len(at.selectbox) == 2
-    assert len(at.download_button) == 2
+    assert len(at.download_button) == 5
 
 
 def test_feature_change_invalidates_stale_results():
@@ -159,7 +159,7 @@ CountryD,15,25,35
     # Now click run clustering
     at.button[0].click().run()
     # Results should be displayed, and total download buttons = 3 (1 exclusion audit + 2 result downloads)
-    assert len(at.download_button) == 3
+    assert len(at.download_button) == 6
     cached = at.session_state["clustering_result"]
     assert "CountrySparse" not in cached["country_names"]
     assert len(cached["country_names"]) == 4
@@ -182,4 +182,3 @@ def test_missingness_slider_change_invalidates_state():
     # algorithm_choice selectbox (index 0) remains
     assert "clustering_result" not in at.session_state
     assert len(at.selectbox) == 1
-

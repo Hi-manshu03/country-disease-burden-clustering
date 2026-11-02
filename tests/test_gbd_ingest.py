@@ -136,6 +136,19 @@ def test_transform_filter_consistency_year(synthetic_gbd_long):
     assert np.isclose(japan_latest, 150.2)
 
 
+def test_transform_rejects_mismatched_measurement_dimension(synthetic_gbd_long):
+    """Do not keep source rows when no record matches the required GBD dimension."""
+    incorrect_metric = synthetic_gbd_long.copy()
+    incorrect_metric["metric_name"] = "Number"
+    with pytest.raises(ValueError, match="No records match the required GBD metric_name"):
+        transform_gbd_long_to_wide(incorrect_metric)
+
+
+def test_transform_rejects_requested_year_not_in_source(synthetic_gbd_long):
+    with pytest.raises(ValueError, match="No records remain after applying standard GBD dimension filters"):
+        transform_gbd_long_to_wide(synthetic_gbd_long, target_year=2019)
+
+
 def test_transform_compatibility_with_validate_and_prepare(synthetic_gbd_long):
     """Verify transformed wide DataFrame satisfies validate_dataset and prepare_features."""
     wide = transform_gbd_long_to_wide(synthetic_gbd_long)
@@ -168,4 +181,3 @@ def test_transform_compatibility_with_kmeans_and_kmedians(synthetic_gbd_long):
     kmed_res = evaluate_kmedians(prepared["X"], [2, 3])
     assert "metrics" in kmed_res
     assert len(kmed_res["metrics"]) == 2
-

@@ -1,160 +1,96 @@
-# Project 28 — Country Disease-Burden Pattern Clustering for Public Health Analysis
+# Country Disease-Burden Pattern Clustering
 
-## 1. Project Purpose & Scope
-This project provides a reproducible, interactive, and deployable unsupervised-learning dashboard to discover patterns in country-level Global Burden of Disease (GBD) indicators. By clustering countries with comparable epidemiological metrics, public health analysts can explore cross-national burden profiles, identify shared health challenges, and inspect multivariate disease-burden structures.
+Project 28 is an interactive Streamlit dashboard for exploring statistical similarities between countries using comparable disease-burden indicators from the IHME Global Burden of Disease (GBD) study. It supports reproducible clustering experiments, internal evaluation, PCA visualization, interpretable cluster summaries and data exports.
 
-> [!WARNING]
-> **Responsible Epidemiological Interpretation:**  
-> Unsupervised clustering identifies statistical similarities and distributional patterns across observations; it **does not** prove causality, etiology, or clinical efficacy. Clusters should not be interpreted as definitive rankings, causal assessments, or clinical diagnoses.
+> **Responsible interpretation:** Clusters describe patterns in the selected data. They do not establish causality, provide diagnoses, or rank countries or health systems.
 
----
+## Dashboard sections
 
-## 2. Current Features & Methodological Architecture
+The dark-only interface uses the supplied amber/graphite visual system and background asset. The tabs separate:
 
-### Data Ingestion & Contract Validation
-- **Strict country identifier contract:** Requires exactly one observation per country. Automatically recognizes column names such as `country`, `location`, `entity`, `iso3`, `iso_code`, `country_name`, `nation`, `state`, `territory`, or `economy`. Rejects nulls, whitespace, and literal string missing values (`"NaN"`, `"None"`).
-- **Duplicate rejection:** Rejects duplicate country identifiers with actionable diagnostic messages. Multi-year, sex-disaggregated, or age-stratified data must be harmonized or filtered before analysis.
-- **Robust numeric coercion:** Infinite values (`inf`, `-inf`) and non-numeric strings are safely coerced to missing values (`NaN`).
-- **Configurable missingness threshold:** Allows users to adjust the maximum allowed row-level missingness ($0\%$ to $100\%$, defaulting to $30\%$). Rows exceeding the threshold are excluded with an epidemiological caveat regarding sample representativeness.
-- **Audit logging:** Excluded countries are logged with their row indices, missing feature counts, missing percentages, and reason codes (`EXCEEDS_MISSING_THRESHOLD` or `ALL_FEATURES_MISSING`), available for inspection and CSV export.
-- **Median imputation & standardization:** Remaining missing cells in retained country rows are imputed using column medians, followed by zero-mean unit-variance standard scaling (`StandardScaler`). Zero-variance features are detected and rejected.
+1. **Overview** — analytical workflow, data-use context and responsible interpretation.
+2. **Dataset & Ingestion** — upload prepared country-level CSVs or GBD long-format exports; inspect data and metadata.
+3. **Algorithm & Configuration** — feature selection, missingness policy, cluster counts, random seed and optional paired algorithm comparison.
+4. **Model Evaluation** — objective curves, Silhouette scores, Davies–Bouldin Index where defined, and metric interpretation.
+5. **Dimensionality Reduction** — PCA projection, explained variance, scree plot and component loadings.
+6. **Cluster Profiles** — original-scale distribution statistics, country search and cluster filtering.
+7. **Reports & Export** — assignment, profile, metric, exclusion-audit CSVs and a plain-text analysis report.
 
-### Clustering Algorithms
-- **K-Means (Euclidean Baseline):** Implements standard Lloyd's K-Means clustering, minimizing Within-Cluster Sum of Squares (WCSS / inertia) using Euclidean distances and feature means as cluster centers.
-- **K-Medians (Manhattan / Robust Alternative):** Implements genuine Manhattan (L1) clustering, minimizing the sum of absolute deviations and updating cluster centroids using feature-wise medians. Highly robust to outliers and skewed burden indicators.
+## Data and provenance
 
-### Model Evaluation
-- **Elbow curves:** Plots WCSS (Inertia) for K-Means and L1 Objective (Manhattan) for K-Medians across evaluated cluster counts $k$.
-- **Silhouette scores:** Computed using the algorithm's respective distance metric (Euclidean for K-Means, Manhattan for K-Medians).
-- **Davies–Bouldin Index:** Reported exclusively for Euclidean K-Means, avoiding invalid Manhattan claims.
-- **Safe degenerate handling:** Degenerate clusterings or singleton assignments return `NaN` gracefully rather than triggering application crashes.
+The dashboard accepts either:
 
-### Principal Component Analysis (PCA)
-- **Unified model:** A single PCA model is fitted on the standardized feature matrix ($X$) across all components.
-- **2D Projection Scatter:** Visualizes country clusters on PC1 and PC2, explicitly reporting individual variance contributions on axis titles.
-- **Dual-Panel Scree Plot:** Displays individual explained variance bar chart and cumulative variance curve with $90\%$ and $95\%$ reference thresholds.
-- **Feature Loadings Interpretation:** Renders a grouped horizontal bar chart for $\le 2$ components or a feature $\times$ component heatmap for $\ge 3$ components. Explicitly documents loading coefficients as linear direction weights rather than correlations or causal factors.
+- A prepared CSV with one unique country/territory per row and at least two usable numeric feature columns; or
+- An IHME GBD long-format CSV containing `location_name`, `cause_name`, and `val`.
 
-### Distributional Cluster Profiles
-- Computes Mean, Standard Deviation, Median, Q1, Q3, and Interquartile Range (IQR) on the **original (unscaled)** feature values to account for skewed health distributions.
+GBD input is filtered to DALYs, Rate, Both sexes and Age-standardized records when those dimensions are present. A year is selected explicitly when available. Duplicate location/cause estimates are rejected rather than averaged. See [data provenance](docs/data_provenance.md) and the [feature dictionary](docs/feature_dictionary.md).
 
-### Interactive State Persistence & Downloads
-- Experiment results, figures, and metrics persist in `st.session_state` across dropdown selections and download clicks.
-- Automatic cache invalidation ensures stale results clear upon file, feature, missingness threshold, or algorithm changes.
-- Three dedicated CSV download channels:
-  1. Country cluster assignments (`country_clusters_k{selected_k}.csv`).
-  2. Model evaluation metrics (`clustering_evaluation.csv`).
-  3. Excluded countries audit log (`excluded_countries_audit.csv`).
+The supplied local extract is GBD 2023 data with 3,060 long-format records, 204 locations and 15 selected causes. It transforms into a 204-country × 15-feature matrix. The raw and processed data files are excluded from Git; they are not bundled for cloud deployment. Confirm IHME terms before redistribution. The download date was not recorded.
 
----
+### Input quality and preprocessing
 
-## 3. Technology Stack & Prerequisites
-- **Python:** 3.11+ / 3.12 (Tested on Python 3.12.4)
-- **Core Libraries:**
-  - `streamlit>=1.39,<2.0`
-  - `pandas>=2.2,<3.0`
-  - `numpy>=1.26,<3.0`
-  - `scikit-learn>=1.5,<2.0`
-  - `plotly>=5.24,<7.0`
-  - `pytest>=8.0,<9.0`
+- Country names/codes must be present, nonblank and unique.
+- Numeric strings are converted; invalid and infinite values are treated as missing.
+- The user-configured row missingness threshold defaults to 30%. Excluded countries are listed in an audit table.
+- Remaining missing feature cells are median-imputed.
+- Zero-variance features are rejected.
+- Standard scaling is used for clustering and PCA; cluster profiles report original, unscaled values.
+- A fixed random seed (default 42) makes experiments reproducible.
 
----
+## Methods
 
-## 4. Local Installation & Setup
+- **K-Means:** Euclidean assignment and mean-based centroids; the objective is WCSS (sum of squared distances).
+- **K-Medians:** Manhattan assignment and component-wise median representatives; the objective is the sum of L1 distances.
+- **Evaluation:** Silhouette is computed using the selected algorithm's distance metric. Davies–Bouldin is reported for K-Means only. Objective values from the two algorithms have different definitions and are not directly comparable.
+- **PCA:** A single fitted model on standardized features provides the scatter plot, variance summary and loadings. Clustering itself uses all selected features, not only the two displayed components.
+- **Profiles:** Mean, standard deviation, median, quartiles and IQR are computed on retained original-scale feature values.
 
-### Clone and Environment Creation
-```bash
-# 1. Create a virtual environment
-python -m venv .venv
+No single internal metric determines an optimal cluster count. Interpret evaluation metrics jointly and in light of domain knowledge.
 
-# 2. Activate virtual environment
-# Windows (PowerShell):
-.venv\Scripts\Activate.ps1
-# Windows (Command Prompt):
-.venv\Scripts\activate.bat
-# macOS / Linux:
-source .venv/bin/activate
+## Architecture
 
-# 3. Install pinned dependencies
-pip install -r project28_starter/requirements.txt
+```text
+app.py                    Streamlit UI, navigation, session state and exports
+src/data.py               Dataset validation, missingness handling and scaling
+src/gbd_transform.py      GBD long-to-wide filtering and validation
+src/clustering.py         K-Means, K-Medians, evaluation and cluster profiles
+src/visualization.py      PCA, evaluation and profile charts
+assets/style.css          Dark dashboard styles and responsive layout
+static/dashboard-bg.png   Dashboard background, served by Streamlit
+tests/                    Unit and Streamlit AppTest coverage
+docs/                     Provenance, feature and testing documentation
 ```
 
-### Running the Application
-From the workspace root:
-```bash
-streamlit run project28_starter/app.py
-```
-Or from inside the `project28_starter` directory:
-```bash
+## Installation and execution
+
+Python 3.11 or newer is recommended.
+
+```powershell
 cd project28_starter
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 streamlit run app.py
 ```
 
-### Running the Test Suite
-From the workspace root:
-```bash
-pytest project28_starter/tests -v
-```
-Or execute with the specific virtual environment binary:
-```bash
-& ".venv\Scripts\python.exe" -m pytest project28_starter/tests -v
+From the project directory, run the tests with:
+
+```powershell
+python -m pytest tests -q
 ```
 
----
+## Deployment preparation
 
-## 5. Input Data Contract & Synthetic Example
+The project entry point is `app.py`; dependency and Streamlit configuration are in `requirements.txt` and `.streamlit/config.toml`. The background asset is served from the project `static/` directory. For Streamlit Community Cloud, point the deployment at this directory and ensure the repository contains the application files and asset.
 
-The uploaded CSV file must contain at least 3 country rows and at least 2 usable numeric feature columns.
+The GBD raw and processed files are intentionally ignored by Git. A deployed app therefore requires users to upload a dataset unless the project owner separately authorizes and provisions a distributable dataset. No public deployment or Git push has been performed.
 
-### Synthetic Example CSV
-> [!NOTE]
-> The data below is **purely synthetic** and generated for testing and demonstration purposes. It does not represent actual IHME/GBD observations.
+## Limitations
 
-```csv
-country,cardiovascular_death_rate,neoplasm_death_rate,respiratory_daly_rate
-Country_Alpha,245.3,180.2,45.1
-Country_Beta,412.8,110.5,82.4
-Country_Gamma,189.4,220.7,31.2
-Country_Delta,320.1,145.0,60.8
-Country_Epsilon,150.2,260.4,25.9
-```
+- Country-level data conceal within-country and subnational differences.
+- GBD estimates are subject to uncertainty, modeling assumptions and differences in source-data completeness.
+- Cross-country comparability depends on consistent source years, measures, units, age groups and sexes.
+- Internal clustering metrics are heuristics, not external clinical or epidemiological validation.
+- The dashboard performs descriptive analysis; it does not support causal, diagnostic or policy-effectiveness claims.
 
-### Input Requirements & Missingness Policy
-1. **Country Column:** Must be named `country`, `location`, `entity`, `iso3`, etc. Every row must have a non-blank, unique value.
-2. **Numeric Features:** Must contain numeric values (rates per 100k, DALYs, percentages).
-3. **Missingness:** Missing cells (`NaN`) are tolerated up to the configured slider threshold ($30\%$ default). Rows exceeding the threshold are excluded and logged in the downloadable audit CSV. Remaining missing cells are imputed with column medians.
-
----
-
-## 6. Interpreting Application Visualizations
-
-1. **Evaluation Curves:**
-   - **Elbow Curve (WCSS / L1 Objective):** Look for a distinct leveling-off or "elbow" where adding another cluster yields diminishing returns in variance reduction.
-   - **Silhouette Score:** Ranges from $-1$ to $+1$. Higher values indicate better-separated and more cohesive clusters. Scores above $0.5$ generally indicate reasonable structure.
-   - **Davies–Bouldin Index (K-Means only):** Lower values indicate better clustering (tighter clusters with greater separation).
-2. **PCA Projection Scatter:**
-   - Shows observations projected onto the 2 directions of maximum variance (PC1 and PC2).
-   - Proximity indicates overall multivariate similarity across standardized features. Note that clustering was computed on all selected features, not exclusively on these 2 dimensions.
-3. **Scree Plot:**
-   - Left panel shows individual percentage of variance captured by each component.
-   - Right panel shows cumulative variance. Red reference lines at $90\%$ and $95\%$ indicate how many components are required to retain the majority of information.
-4. **PCA Loadings:**
-   - Bar chart ($\le 2$ components) or Heatmap ($\ge 3$ components) shows feature weights. Positive/negative values indicate the relative contribution of each standardized feature to the principal component axis.
-
----
-
-## 7. Known Limitations
-
-- **Ecological & Cross-Sectional:** Country-level aggregates mask within-country inequalities, urban-rural disparities, and socioeconomic gradients.
-- **Harmonization Dependencies:** Comparing indicators across differing collection methodologies, years, or registration completeness requires external domain harmonization.
-- **Heuristic Cluster Selection:** Unsupervised metrics (Silhouette, Elbow) provide mathematical heuristics, not clinical ground truth.
-- **Pending Benchmark Integration:** The official IHME/GBD benchmark dataset has not yet been integrated and must be obtained under authorized educational terms.
-
----
-
-## 8. Deployment Preparation (Streamlit Community Cloud)
-
-- **Entry Point:** `project28_starter/app.py`
-- **Dependencies:** `project28_starter/requirements.txt`
-- **Configuration:** `.streamlit/config.toml` pre-configured with `headless = true` and `maxUploadSize = 25`.
-- **Portability:** Code uses relative module imports (`src.*`) and path-agnostic file handling, with zero hardcoded local drive paths. No GPU or external database is required.
+For further test and release status, see [testing documentation](docs/testing.md).

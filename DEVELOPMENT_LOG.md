@@ -476,3 +476,28 @@ Established the acquisition specification, feature selection methodology, transf
 * Download the specified CSV file from `https://vizhub.healthdata.org/gbd-results/` according to the instructions in `docs/data_provenance.md`.
 * Place the downloaded file into `project28_starter/data/raw/` or workspace directory.
 * Proceed to Task `P28-008B` to inspect the real file schema, execute the live pivot, and run clustering experiments on real data.
+
+
+### Entry: 2026-10-31 — Local GBD Integration, Dashboard Redesign & Documentation
+
+#### Repository and data audit
+* Confirmed branch `project28/final-development`, checkpoint `73b7f6a`, and a clean worktree before implementation.
+* Baseline suite: 115 passed, with two expected scikit-learn `ConvergenceWarning`s on deliberately degenerate duplicate-point fixtures.
+* Found the supplied local GBD export, previously not reflected in the tracker: 3,060 long-format rows, 204 locations, 15 causes, year 2023, and one value per queried measure/metric/age/sex/population dimension.
+* Verified the transformation yields 204 country/territory observations × 15 features; default preprocessing retained all 204 with no imputed cells.
+* Raw and processed data remain ignored by Git; no data files were added to version control.
+
+#### Implementation
+* Wired GBD long-format CSV upload into the application, including year selection, metadata, filtering, pivoting and actionable validation.
+* Changed GBD dimension filtering to reject a present-but-mismatched dimension instead of retaining incompatible source records.
+* Reorganized the interface into seven analytical tabs and configured Streamlit Dark Mode only. Added responsive graphite/amber styling and a deployment-relative static background URL.
+* Added optional paired K-Means/K-Medians experiments with shared standardized input, distance-appropriate metrics, PCA, original-scale profiles, assignment filtering, and CSV/TXT exports.
+* Reworked README and provenance/testing documentation to reflect the supplied GBD 2023 file and actual app behavior. No public deployment, commit or push was made.
+
+#### Verification in this entry
+* Python syntax check for `app.py`, `src/gbd_transform.py` and `src/visualization.py`: passed.
+* Targeted GBD, AppTest upload and state integration tests: 12 passed.
+* Full regression command: `python -m pytest project28_starter/tests -q` — **118 passed, 2 expected warnings in 52.52s**. Both warnings are scikit-learn `ConvergenceWarning`s from the test intentionally fitting multiple clusters to identical points.
+* Real-data AppTest: local GBD extract loaded as 204 countries × 15 features, and three K-Means k solutions ran with no Streamlit exceptions.
+* Local server smoke test: `/_stcore/health` returned HTTP 200; `/app/static/dashboard-bg.png` returned HTTP 200 with `image/png` content.
+* `docs/testing.md` records test and smoke-test results. Cloud deployment remains untested and was not performed.
