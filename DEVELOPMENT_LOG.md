@@ -501,3 +501,22 @@ Established the acquisition specification, feature selection methodology, transf
 * Real-data AppTest: local GBD extract loaded as 204 countries × 15 features, and three K-Means k solutions ran with no Streamlit exceptions.
 * Local server smoke test: `/_stcore/health` returned HTTP 200; `/app/static/dashboard-bg.png` returned HTTP 200 with `image/png` content.
 * `docs/testing.md` records test and smoke-test results. Cloud deployment remains untested and was not performed.
+
+---
+
+### Entry: 2026-11-02 — Task P28-011: Result-Backed Dashboard UI
+
+#### Implementation
+* Replaced visible Project 28 header branding with Public Health Intelligence and the requested analytics title/description.
+* Added seven-section sidebar navigation using Streamlit's keyed tab state, with a selected amber state and dataset/model/cluster/source status derived from session state.
+* Rebuilt Overview with four dynamic KPIs and a 2×2 layout: country-assignment choropleth, standardized cluster-mean heatmap, existing fitted-model PCA plot, and evaluation chart with an explicit selected-K marker and separate metric scales.
+* Retained the existing approved `static/dashboard-bg.png`, dark-only theme, backend state, preprocessing, clustering, PCA, and export paths. No dependencies were added.
+* Refined translucent graphite panels, amber accents, sidebar styling, and responsive column stacking. Updated README, testing documentation, and tracker.
+
+#### Verification
+* Final full suite: **118 passed in 56.65 seconds**; 31 Plotly country-name deprecation warnings and 2 expected scikit-learn warnings for identical-point fixtures.
+* Evaluation-chart-specific test: **1 passed** for distinct axes, metric traces and selected-K markers.
+* Local browser check on port 8502 loaded `Project test data/country_clusters_k2.csv` (204 observations, 16 numeric indicators), ran K-Means with five selected features, and rendered all overview visualizations.
+* At 390px mobile width, Streamlit collapsed the sidebar, retained the expand control, stacked KPI cards, and reported a 390px document width with no horizontal overflow.
+* Final desktop screenshot review verified that the evaluation chart's legend sits below the plot without overlapping the title or metric traces.
+* Screenshots were captured in the implementation session. Plotly currently emits a deprecation warning for country-name geographic lookup; country names lacking built-in boundaries may not be colored on the map, but remain in tables and exports.

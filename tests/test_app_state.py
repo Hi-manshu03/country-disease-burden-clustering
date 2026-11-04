@@ -19,6 +19,20 @@ CountryZ,700,800,900
 """
 
 
+def test_sidebar_navigation_controls_selected_section():
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+
+    navigation = next(radio for radio in at.radio if radio.key == "navigation_choice")
+    assert navigation.value == "Overview"
+    assert at.session_state["dashboard_tabs"] == "Overview"
+
+    navigation.set_value("Dimensionality Reduction").run()
+    assert at.session_state["navigation_choice"] == "Dimensionality Reduction"
+    assert at.session_state["dashboard_tabs"] == "Dimensionality Reduction"
+    assert not at.exception
+
+
 def test_clustering_result_persistence_on_rerun():
     at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()

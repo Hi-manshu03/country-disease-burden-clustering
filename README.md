@@ -1,20 +1,22 @@
 # Country Disease-Burden Pattern Clustering
 
-Project 28 is an interactive Streamlit dashboard for exploring statistical similarities between countries using comparable disease-burden indicators from the IHME Global Burden of Disease (GBD) study. It supports reproducible clustering experiments, internal evaluation, PCA visualization, interpretable cluster summaries and data exports.
+Public Health Intelligence is an interactive Streamlit dashboard for exploring statistical similarities between countries using comparable disease-burden indicators from the IHME Global Burden of Disease (GBD) study. It supports reproducible clustering experiments, internal evaluation, PCA visualization, interpretable cluster summaries and data exports.
 
 > **Responsible interpretation:** Clusters describe patterns in the selected data. They do not establish causality, provide diagnoses, or rank countries or health systems.
 
 ## Dashboard sections
 
-The dark-only interface uses the supplied amber/graphite visual system and background asset. The tabs separate:
+The dark-only interface uses the supplied amber/graphite visual system and global-health background asset. A collapsible Streamlit sidebar provides functional navigation across:
 
-1. **Overview** — analytical workflow, data-use context and responsible interpretation.
+1. **Overview** — live country, indicator, cluster and best-silhouette KPIs, plus a country map, standardized cluster profiles, PCA projection and evaluation curves from the current executed result.
 2. **Dataset & Ingestion** — upload prepared country-level CSVs or GBD long-format exports; inspect data and metadata.
 3. **Algorithm & Configuration** — feature selection, missingness policy, cluster counts, random seed and optional paired algorithm comparison.
 4. **Model Evaluation** — objective curves, Silhouette scores, Davies–Bouldin Index where defined, and metric interpretation.
 5. **Dimensionality Reduction** — PCA projection, explained variance, scree plot and component loadings.
 6. **Cluster Profiles** — original-scale distribution statistics, country search and cluster filtering.
 7. **Reports & Export** — assignment, profile, metric, exclusion-audit CSVs and a plain-text analysis report.
+
+The overview uses the experiment's existing labels and fitted PCA model; it does not refit PCA or derive dashboard-only clustering results. Country map coloring is limited to country names recognized by Plotly's built-in geographic boundary data; every retained assignment remains available in the cluster table and exports. Sidebar workspace status reflects the loaded dataset, executed model, selected cluster count and source metadata.
 
 ## Data and provenance
 
@@ -55,7 +57,7 @@ src/data.py               Dataset validation, missingness handling and scaling
 src/gbd_transform.py      GBD long-to-wide filtering and validation
 src/clustering.py         K-Means, K-Medians, evaluation and cluster profiles
 src/visualization.py      PCA, evaluation and profile charts
-assets/style.css          Dark dashboard styles and responsive layout
+assets/style.css          Dark-only amber/graphite system, translucent panels and responsive layout
 static/dashboard-bg.png   Dashboard background, served by Streamlit
 tests/                    Unit and Streamlit AppTest coverage
 docs/                     Provenance, feature and testing documentation

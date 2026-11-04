@@ -5,6 +5,7 @@ from io import BytesIO
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 import streamlit as st
 
 from src.clustering import compute_cluster_profiles, evaluate_kmeans, evaluate_kmedians
@@ -13,10 +14,13 @@ from src.gbd_transform import transform_gbd_long_to_wide
 from src.visualization import (
     fit_pca,
     make_cluster_profile_figure,
+    make_country_cluster_map,
+    make_dashboard_evaluation_figure,
     make_evaluation_curves,
     make_pca_figure,
     make_pca_loadings_figure,
     make_scree_figure,
+    make_standardized_cluster_profiles,
 )
 
 
@@ -52,24 +56,62 @@ css_path = PROJECT_DIR / "assets" / "style.css"
 if css_path.is_file():
     base_url_path = str(st.get_option("server.baseUrlPath") or "").strip("/")
     static_url = f"/{base_url_path}/app/static/dashboard-bg.png" if base_url_path else "/app/static/dashboard-bg.png"
-    css = css_path.read_text(encoding="utf-8").replace("__BACKGROUND_IMAGE_URL__", static_url)
+    css = css_path.read_text(encoding="utf-8").replace("dashboard-bg.png", static_url)
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 else:
     st.warning("Custom stylesheet not found; the dashboard is using Streamlit's dark theme.")
 
+navigation_sections = [
+        "Overview",
+        "Dataset & Ingestion",
+        "Algorithm & Configuration",
+        "Model Evaluation",
+        "Dimensionality Reduction",
+        "Cluster Profiles",
+        "Reports & Export",
+]
+navigation_icons = {
+    "Overview": "▦",
+    "Dataset & Ingestion": "▤",
+    "Algorithm & Configuration": "☷",
+    "Model Evaluation": "▥",
+    "Dimensionality Reduction": "⌁",
+    "Cluster Profiles": "◈",
+    "Reports & Export": "⇩",
+}
+with st.sidebar:
+        st.markdown(
+                '<div class="sidebar-brand"><span class="brand-mark">◎</span>'
+                '<span>PUBLIC HEALTH<br>INTELLIGENCE</span></div>',
+                unsafe_allow_html=True,
+        )
+        st.markdown(
+                '<div class="sidebar-product"><span class="product-mark">⌁</span>'
+                '<strong>Country Disease-Burden Pattern Clustering</strong></div>',
+                unsafe_allow_html=True,
+        )
+        selected_section = st.radio(
+                "Dashboard sections",
+                navigation_sections,
+                key="navigation_choice",
+                format_func=lambda label: f"{navigation_icons[label]}  {label}",
+                label_visibility="collapsed",
+        )
+        st.session_state["dashboard_tabs"] = selected_section
+
 st.markdown(
-    """
-    <header class="project-header">
-      <div class="project-eyebrow">PROJECT 28 · PUBLIC HEALTH INTELLIGENCE</div>
-      <h1 class="project-title">Country Disease-Burden Pattern Clustering</h1>
-      <p class="project-description">
-        Explore comparable country-level disease-burden indicators with reproducible,
-        unsupervised machine learning.
-      </p>
-      <div class="project-meta">IHME GBD 2023 · K-MEANS · K-MEDIANS · PCA</div>
-    </header>
-    """,
-    unsafe_allow_html=True,
+        """
+        <header class="project-header">
+            <div class="project-eyebrow">PUBLIC HEALTH ANALYTICS</div>
+            <h1 class="project-title">Country Disease-Burden Pattern Clustering</h1>
+            <p class="project-description">
+                Identify groups of countries with similar disease-burden profiles using
+                unsupervised machine learning.
+            </p>
+            <div class="project-meta">IHME GBD 2023 &nbsp; | &nbsp; K-MEANS &nbsp; | &nbsp; K-MEDIANS &nbsp; | &nbsp; PCA</div>
+        </header>
+        """,
+        unsafe_allow_html=True,
 )
 st.warning(
     "Clusters describe statistical similarities only. They do not establish causes, "
@@ -85,67 +127,10 @@ st.warning(
     profiles_tab,
     exports_tab,
 ) = st.tabs(
-    [
-        "Overview",
-        "Dataset & Ingestion",
-        "Algorithm & Configuration",
-        "Model Evaluation",
-        "Dimensionality Reduction",
-        "Cluster Profiles",
-        "Reports & Export",
-    ]
+    navigation_sections,
+    key="dashboard_tabs",
+    on_change="rerun",
 )
-
-
-with overview_tab:
-    st.subheader("A reproducible workflow for country-level pattern analysis")
-    st.write(
-        "Select a prepared country-level CSV or an IHME GBD long-format export, "
-        "review how the data are filtered and preprocessed, then compare clustering "
-        "solutions and inspect their profiles."
-    )
-    overview_cols = st.columns(3)
-    overview_cols[0].markdown(
-        '<div class="info-card"><div class="card-label">01 · Prepare</div>'
-        "<strong>Validate comparable country observations</strong><p>Review the source, "
-        "features, missingness and exclusions before modeling.</p></div>",
-        unsafe_allow_html=True,
-    )
-    overview_cols[1].markdown(
-        '<div class="info-card"><div class="card-label">02 · Evaluate</div>'
-        "<strong>Compare clustering configurations</strong><p>Assess objective curves "
-        "and distance-appropriate internal validation metrics.</p></div>",
-        unsafe_allow_html=True,
-    )
-    overview_cols[2].markdown(
-        '<div class="info-card"><div class="card-label">03 · Interpret</div>'
-        "<strong>Inspect profiles, not diagnoses</strong><p>Explore PCA projections, "
-        "original-scale summaries and country assignments.</p></div>",
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("#### Methodology at a glance")
-    st.markdown(
-        "- Selected features are median-imputed after transparent row-level missingness checks, "
-        "then standardized for clustering and PCA.\n"
-        "- K-Means minimizes squared Euclidean distance; K-Medians uses Manhattan assignment "
-        "and feature-wise median representatives.\n"
-        "- PCA is a visualization and dimensionality-reduction tool; clustering uses all "
-        "selected standardized features."
-    )
-    st.caption(
-        "The supplied local GBD 2023 extract is not included in Git. For deployment, upload "
-        "a dataset whose redistribution is authorized."
-    )
-    if "source_df" in st.session_state:
-        source_df = st.session_state["source_df"]
-        summary_cols = st.columns(3)
-        summary_cols[0].metric("Countries loaded", f"{len(source_df):,}")
-        summary_cols[1].metric("Available indicators", f"{len(st.session_state['source_features']):,}")
-        summary_cols[2].metric("Source", st.session_state["source_metadata"]["label"])
-    else:
-        st.info("Start in **Dataset & Ingestion** to select a dataset.")
-
 
 with dataset_tab:
     st.subheader("Dataset & ingestion")
@@ -305,6 +290,7 @@ prepared = None
 analysis_signature = None
 results = st.session_state.get("clustering_result")
 selected_k: int | None = None
+features: list[str] = []
 profile_df = None
 assignments = None
 
@@ -478,11 +464,108 @@ with configuration_tab:
                             "imputed_cells": prepared["imputed_cells"],
                             "exclusions_df": prepared["exclusions_df"],
                         }
-                        st.success("Experiment complete. Results are available in the analysis tabs.")
+                        st.success("Please check Results in Model Evaluation tab.")
 
 results = st.session_state.get("clustering_result")
 if results is not None and results.get("analysis_signature") != analysis_signature:
     results = None
+
+with overview_tab:
+    selected_features = list(features or st.session_state.get("selected_features", []))
+    selected_k_values = list(st.session_state.get("selected_k_values", []))
+    dashboard_k = None
+    best_silhouette = None
+    best_silhouette_algorithm = None
+    if results is not None:
+        available_k = list(results["labels_by_k"])
+        dashboard_k = st.session_state.get("selected_k_solution")
+        if dashboard_k not in available_k:
+            dashboard_k = available_k[0]
+        silhouette_scores = []
+        for algorithm, metric_frame in results["comparison_metrics"].items():
+            if "silhouette_score" not in metric_frame:
+                continue
+            scores = pd.to_numeric(metric_frame["silhouette_score"], errors="coerce")
+            for score in scores[np.isfinite(scores)]:
+                silhouette_scores.append((float(score), algorithm))
+        if silhouette_scores:
+            best_silhouette, best_silhouette_algorithm = max(silhouette_scores, key=lambda row: row[0])
+
+    metric_cols = st.columns(4)
+    metric_cols[0].metric(
+        "🌐 Countries analysed",
+        f"{results['retained_rows']:,}" if results is not None else "—",
+        "Validated for model" if results is not None else "Run an experiment",
+        delta_color="off",
+    )
+    metric_cols[1].metric(
+        "▦ Indicators (features)",
+        f"{len(results['features'] if results is not None else selected_features):,}",
+        "Selected" if selected_features else "Select indicators",
+        delta_color="off",
+    )
+    metric_cols[2].metric(
+        "◎ Clusters (K)",
+        str(dashboard_k if dashboard_k is not None else (selected_k_values[0] if selected_k_values else "—")),
+        results["algorithm"] if results is not None else "Not executed",
+        delta_color="off",
+    )
+    metric_cols[3].metric(
+        "▥ Best silhouette score",
+        f"{best_silhouette:.2f}" if best_silhouette is not None else "—",
+        best_silhouette_algorithm or "No valid score available",
+        delta_color="off",
+    )
+
+    if results is None:
+        if source_df is None:
+            st.info("Load a validated dataset, configure an experiment, and run clustering to populate this dashboard.")
+        else:
+            st.info("Configure and run a clustering experiment to display country assignments and model visualizations.")
+    else:
+        labels = results["labels_by_k"][dashboard_k]
+        top_left, top_right = st.columns(2)
+        with top_left, st.container(border=True):
+            st.markdown("#### Country Clusters — Global View")
+            st.plotly_chart(
+                make_country_cluster_map(results["country_names"], labels),
+                width="stretch",
+                key="overview_country_map",
+            )
+            st.caption("Only countries with geographic boundaries are colored; all assignments remain available in Cluster Profiles and Reports & Export.")
+        with top_right, st.container(border=True):
+            st.markdown("#### Cluster Profile Comparison")
+            st.plotly_chart(
+                make_standardized_cluster_profiles(
+                    results["X"], labels, results["features"]
+                ),
+                width="stretch",
+                key="overview_cluster_profiles",
+            )
+            st.caption("Cluster means are shown as standardized values for comparison across indicators.")
+
+        bottom_left, bottom_right = st.columns(2)
+        with bottom_left, st.container(border=True):
+            st.markdown("#### Disease-Burden Pattern — PCA")
+            st.plotly_chart(
+                make_pca_figure(
+                    results["X"], labels, results["country_names"],
+                    pca_model=results["pca_model"],
+                ),
+                width="stretch",
+                key="overview_pca",
+            )
+        with bottom_right, st.container(border=True):
+            st.markdown(f"#### Model Evaluation — Cluster Count (K) · Selected K = {dashboard_k}")
+            st.plotly_chart(
+                make_dashboard_evaluation_figure(
+                    results["metrics"],
+                    algorithm=results["algorithm"],
+                    selected_k=dashboard_k,
+                ),
+                width="stretch",
+                key="overview_evaluation",
+            )
 
 with evaluation_tab:
     st.subheader("Model evaluation")
@@ -495,7 +578,9 @@ with evaluation_tab:
             "Silhouette is higher-is-better; Davies–Bouldin is lower-is-better and shown for K-Means."
         )
         st.plotly_chart(
-            make_evaluation_curves(results["metrics"], algorithm=results["algorithm"]),
+            make_evaluation_curves(
+                results["metrics"], algorithm=results["algorithm"], selected_k=selected_k
+            ),
             width="stretch",
         )
         st.dataframe(results["metrics"], width="stretch")
@@ -718,3 +803,21 @@ with exports_tab:
             "The report records the selected analysis and observed metrics. Review the data "
             "provenance and limitations before sharing exported results."
         )
+
+with st.sidebar:
+    st.markdown('<div class="sidebar-status-title">WORKSPACE STATUS</div>', unsafe_allow_html=True)
+    dataset_loaded = source_df is not None
+    model_executed = results is not None
+    cluster_count = selected_k if selected_k is not None else "—"
+    data_source_label = (
+        st.session_state["source_metadata"]["label"] if dataset_loaded else "No source"
+    )
+    st.markdown(
+        f'<div class="status-row"><span>Dataset</span><strong class="status-pill {"is-ready" if dataset_loaded else "is-idle"}">'
+        f'{"Loaded" if dataset_loaded else "Not loaded"}</strong></div>'
+        f'<div class="status-row"><span>Model</span><strong class="status-pill {"is-ready" if model_executed else "is-idle"}">'
+        f'{"Executed" if model_executed else "Not run"}</strong></div>'
+        f'<div class="status-row"><span>Clusters</span><strong>{cluster_count}</strong></div>'
+        f'<div class="status-row"><span>Data source</span><strong class="status-source">{data_source_label}</strong></div>',
+        unsafe_allow_html=True,
+    )

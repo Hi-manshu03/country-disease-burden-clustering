@@ -13,9 +13,12 @@ from sklearn.decomposition import PCA
 
 from src.visualization import (
     fit_pca,
+    make_country_cluster_map,
+    make_dashboard_evaluation_figure,
     make_pca_figure,
     make_pca_loadings_figure,
     make_scree_figure,
+    make_standardized_cluster_profiles,
 )
 from src.data import prepare_features
 
@@ -317,6 +320,57 @@ class TestMakePcaLoadingsFigure:
         z_expected = pca.components_.T  # shape (n_features, n_components)
         np.testing.assert_allclose(z_fig, z_expected, atol=1e-10,
                                    err_msg="Heatmap z-values must equal pca.components_.T")
+
+
+def test_country_cluster_map_uses_actual_assignments():
+    fig = make_country_cluster_map(
+        ["Canada", "Brazil", "Kenya", "Japan"],
+        np.array([0, 1, 1, 0]),
+    )
+
+    assert [trace.name for trace in fig.data] == ["Cluster 1", "Cluster 2"]
+    assert list(fig.data[0].locations) == ["Canada", "Japan"]
+    assert list(fig.data[1].locations) == ["Brazil", "Kenya"]
+
+
+def test_standardized_cluster_profiles_match_cluster_means():
+    X = np.array([
+        [-1.0, 0.0],
+        [-0.5, 1.0],
+        [0.5, -1.0],
+        [1.0, 0.0],
+    ])
+    labels = np.array([0, 0, 1, 1])
+    fig = make_standardized_cluster_profiles(X, labels, ["Mortality", "DALYs"])
+
+    np.testing.assert_allclose(fig.data[0].z, [[-0.75, 0.5], [0.75, -0.5]])
+    assert list(fig.data[0].y) == ["Cluster 1", "Cluster 2"]
+
+
+def test_country_cluster_map_rejects_misaligned_labels():
+    with pytest.raises(ValueError, match="does not match cluster labels count"):
+        make_country_cluster_map(["Canada"], np.array([0, 1]))
+
+
+def test_dashboard_evaluation_chart_separates_metric_scales_and_marks_selected_k():
+    metrics = pd.DataFrame({
+        "k": [2, 3, 4],
+        "wcss_inertia": [20.0, 12.0, 8.0],
+        "silhouette_score": [0.42, 0.51, 0.47],
+        "davies_bouldin_index": [1.4, 1.1, 1.3],
+    })
+    fig = make_dashboard_evaluation_figure(metrics, "K-Means (Euclidean)", 3)
+
+    assert [trace.name for trace in fig.data] == [
+        "WCSS (inertia)",
+        "Silhouette (higher is better)",
+        "Davies–Bouldin (lower is better)",
+    ]
+    assert fig.layout.yaxis.title.text == "WCSS (inertia)"
+    assert fig.layout.yaxis2.title.text == "Silhouette"
+    assert fig.layout.yaxis3.title.text == "Davies–Bouldin"
+    assert len(fig.layout.shapes) == 2
+    assert fig.layout.legend.y < 0
 
     def test_heatmap_y_labels_are_feature_names(self):
         """Heatmap row labels (y) must match the provided feature names."""
