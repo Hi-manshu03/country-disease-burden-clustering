@@ -148,3 +148,33 @@ Country4,15,25,35
     cached = at.session_state["clustering_result"]
     assert list(cached["labels_by_k"].keys()) == [2, 3]
 
+
+def test_app_transforms_uploaded_gbd_long_format_csv():
+    """Verify a GBD long export is filtered and pivoted before feature selection."""
+    records = []
+    countries = ["Japan", "Brazil", "Kenya", "Canada"]
+    causes = ["Cause A", "Cause B", "Cause C"]
+    for country_index, country in enumerate(countries):
+        for cause_index, cause in enumerate(causes):
+            records.append({
+                "measure_name": "DALYs (Disability-Adjusted Life Years)",
+                "location_name": country,
+                "sex_name": "Both",
+                "age_name": "Age-standardized",
+                "cause_name": cause,
+                "metric_name": "Rate",
+                "year": 2023,
+                "val": float(10 + country_index * 7 + cause_index * 3),
+            })
+    csv_bytes = pd.DataFrame(records).to_csv(index=False).encode("utf-8")
+
+    at = AppTest.from_file(APP_PATH, default_timeout=45)
+    at.run()
+    at.file_uploader[0].upload("gbd_long.csv", csv_bytes).run()
+
+    wide = at.session_state["source_df"]
+    assert wide.shape == (4, 4)
+    assert set(wide["country"]) == set(countries)
+    assert set(at.session_state["source_features"]) == set(causes)
+    assert at.session_state["source_metadata"]["year"] == 2023
+    assert not at.exception

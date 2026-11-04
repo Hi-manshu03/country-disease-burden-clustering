@@ -1,7 +1,7 @@
 # Project 28 — Country Disease-Burden Pattern Clustering
 ## Master Task Tracker
 
-**Last Updated:** 2026-10-30T06:43:00+05:30  
+**Last Updated:** 2026-10-31
 **Target Deadline:** 2026-10-31  
 **Project Lead / Instruction Manager:** Antigravity AI Agent & Pair Programmer  
 
@@ -19,7 +19,10 @@
 | `P28-006` | PCA Loadings, Scree Plot & Axis Variance Visualization | **COMPLETED** | UI / ML Agent | `P28-005` | 2026-10-28 |
 | `P28-007A`| Application Stabilization and Deployment Readiness | **COMPLETED** | QA / Lead Agent | `P28-006` | 2026-10-29 |
 | `P28-008A`| Dataset Acquisition Specification & Ingestion Architecture | **COMPLETED** | Research / Data Agent | `P28-007A` | 2026-10-30 |
-| `P28-008B`| Official File Provisioning, Validation & Live Experiment | **AWAITING USER FILE** | Project Owner / ML Agent | `P28-008A` | — |
+| `P28-008B`| Local GBD File Validation & Ingestion Integration | **COMPLETED (LOCAL DATA)** | Project Owner / ML Agent | `P28-008A` | 2026-10-31 |
+| `P28-009` | Dark Dashboard Redesign, Navigation & Analytical Exports | **COMPLETED** | UI / ML Agent | `P28-008A` | 2026-10-31 |
+| `P28-010` | Documentation Alignment & Regression Verification | **COMPLETED** | QA / Integration Agent | `P28-009` | 2026-10-31 |
+| `P28-011` | Result-Backed Public Health Intelligence Dashboard UI | **COMPLETED** | UI / Integration Agent | `P28-010` | 2026-11-02 |
 
 ---
 
@@ -41,3 +44,30 @@
 * **Verification Evidence:**
   - `& ".venv\Scripts\python.exe" -m pytest project28_starter/tests/test_gbd_ingest.py -v` passed (8/8 tests, exit code 0).
   - Full regression test suite: 115 passed.
+
+#### [COMPLETED] `P28-008B`: Local GBD File Validation & Ingestion Integration
+* The supplied local GBD 2023 export was verified as 3,060 long-format records, 204 locations, 15 causes and year 2023.
+* Transformation yields 204 country/territory rows × 15 indicators; all passed default preprocessing with no exclusions or imputations.
+* The app now accepts GBD long-format uploads and reports the selected year and filtered dimensions. Raw and processed data remain ignored by Git.
+* Public redistribution terms and the source download date remain unverified; no deployment dataset is bundled.
+
+#### [COMPLETED] `P28-009`: Dark Dashboard Redesign, Navigation & Analytical Exports
+* Added seven Streamlit-native tabs, dark-only theme configuration, responsive graphite/amber styling and the local static background.
+* Added same-data K-Means/K-Medians comparison, PCA views, searchable/filterable country assignments, original-scale cluster profiles, and CSV/TXT exports.
+* Tightened GBD dimension filtering so a present but incompatible measure/metric/sex/age dimension is rejected rather than silently retained.
+* Targeted integration and ingestion verification: 12 tests passed.
+
+#### [COMPLETED] `P28-010`: Documentation Alignment & Regression Verification
+* README, provenance and test documentation have been aligned to the actual local extract and dashboard.
+* Full regression run: 118 passed, two expected `ConvergenceWarning`s on deliberately identical-point fixtures.
+* Local GBD AppTest completed with 204 countries, 15 features and three k values; no app exceptions.
+* Streamlit health endpoint and local static background URL returned HTTP 200.
+* Public deployment remains intentionally unperformed; no owner approval or deployment URL was provided.
+
+#### [COMPLETED] `P28-011`: Result-Backed Public Health Intelligence Dashboard UI
+* Replaced visible Project 28 header branding with the Public Health Intelligence identity and required analytics heading.
+* Added a collapsible Streamlit sidebar with the seven ordered sections, functional radio-to-tab selection, selected-state styling, and data-derived workspace status.
+* Rebuilt Overview with four result-backed KPIs and a 2×2 chart grid: assigned-country world map, standardized cluster profile heatmap, existing fitted-model PCA projection, and evaluation curves with the selected K marked.
+* Refined the existing dark-only amber/graphite CSS with translucent panels, the already-approved background image, and responsive column wrapping. No dependency or backend algorithm changes.
+* Updated README, testing documentation, task tracker, and development log for the new UI and verification.
+* Verification: final full suite **118 passed in 56.65s**. Desktop and 390px mobile browser checks confirmed successful startup, navigation, a 204-row test-data clustering run, populated KPI/charts, mobile sidebar collapse, and no horizontal overflow.

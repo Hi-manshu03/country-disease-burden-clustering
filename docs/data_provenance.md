@@ -1,90 +1,62 @@
-# Official IHME / GBD Data Provenance Record
+# IHME Global Burden of Disease 2023 — Data Provenance
 
-## 1. Study and Source Metadata
-- **Dataset Title:** Global Burden of Disease (GBD) Study — Cause-Specific Disability-Adjusted Life Years (DALYs)
-- **Publisher / Source:** Institute for Health Metrics and Evaluation (IHME), University of Washington
-- **Official Tool URL:** [https://vizhub.healthdata.org/gbd-results/](https://vizhub.healthdata.org/gbd-results/)
-- **Catalog Portal:** Global Health Data Exchange (GHDx) ([https://ghdx.healthdata.org/](https://ghdx.healthdata.org/))
-- **Study / Release Version:** GBD 2021 / GBD 2023 (latest finalized release available in Results Tool)
-- **Access Protocol:** Interactive query via IHME VizHub GBD Results Tool (requires free user registration)
-- **License / Terms of Use:** IHME Non-Commercial User Agreement (Educational and research use permitted; commercial redistribution prohibited without explicit written permission)
-- **Citation:** 
-  > GBD 2021 Diseases and Injuries Collaborators. Global incidence, prevalence, years lived with disability (YLDs), disability-adjusted life-years (DALYs), and healthy life expectancy (HALE) for 371 diseases and injuries in 204 countries and territories and 811 subnational locations, 1990–2021: a systematic analysis for the Global Burden of Disease Study 2021. *The Lancet*, 2024; 403(10440): 2133–2161. DOI: 10.1016/S0140-6768(24)00757-8.
+## Source record
 
----
+- **Publisher:** Institute for Health Metrics and Evaluation (IHME), University of Washington
+- **Study:** Global Burden of Disease Study 2023 Results
+- **Official Results Tool:** <https://vizhub.healthdata.org/gbd-results/>
+- **Source file supplied locally:** `data/raw/IHME-GBD_2023_DATA-34567faa-1.csv`
+- **Download date:** Not recorded in the supplied files.
+- **Terms:** Access, use and redistribution are governed by the IHME Results Tool terms applicable to the downloader. Review those terms before sharing or redistributing data; this project does not assume public redistribution rights.
 
-## 2. Target Dataset Query Specifications (for Project Owner Download)
+The supplied `data/raw/citation.txt` gives the following citation:
 
-To obtain the exact dataset needed for Project 28 clustering, configure the filters in the **GBD Results Tool** ([https://vizhub.healthdata.org/gbd-results/](https://vizhub.healthdata.org/gbd-results/)) as follows:
+> Global Burden of Disease Collaborative Network. Global Burden of Disease Study 2023 (GBD 2023) Results. Seattle, United States: Institute for Health Metrics and Evaluation (IHME), 2024. Available from https://vizhub.healthdata.org/gbd-results/.
 
-| Parameter | Selection in Tool | Methodological Rationale |
-| :--- | :--- | :--- |
-| **Base** | Single / GBD Estimates | Standard point estimates with uncertainty intervals |
-| **Context** | Causes | Direct disease and injury burden (not risk factors or impairments) |
-| **Measure** | DALYs (Disability-Adjusted Life Years) | Quantifies total health loss by summing premature mortality (YLL) and morbidity (YLD) |
-| **Metric** | Rate | Expresses burden per 100,000 population, enabling meaningful cross-national comparison |
-| **Age** | Age-standardized | Removes the confounding effect of differing population age structures between aging and youthful nations |
-| **Sex** | Both | Captures aggregate population disease burden without sex disaggregation |
-| **Year** | Latest available (2021 or 2023) | Provides the most recent comparable snapshot of global health patterns |
-| **Location** | Select All Countries and Territories | Restrict to national units (204 GBD countries and territories); omit global and regional super-aggregates |
-| **Cause** | 15 Selected Level 2 Causes (see Section 3) | Mutually exclusive, non-overlapping Level 2 categories spanning NCDs, communicable diseases, and injuries |
+## Supplied extract verification
 
----
+The local CSV was inspected and transformed through the project ingestion pipeline. It contains 3,060 long-format records, 204 distinct locations, 15 causes, and the year 2023. The supplied records have one value each for measure, metric, age, sex and population group:
 
-## 3. Selected Cause Categories (Level 2 Hierarchy)
+- Measure: DALYs (Disability-Adjusted Life Years)
+- Metric: Rate
+- Age: Age-standardized
+- Sex: Both
+- Year: 2023
+- Population group: All Population
 
-To prevent multicollinearity, double-counting, and parent-child redundancy, the selection strictly utilizes **Level 2** disease and injury categories from the official GBD hierarchy:
+The transformation yields 204 country/territory rows and 15 cause features. All 204 rows passed the default 30% missingness rule, with no imputations in the verified extract. This is a local verification result, not a model-quality or epidemiological conclusion.
 
-1. `Cardiovascular diseases`
-2. `Neoplasms`
-3. `Chronic respiratory diseases`
-4. `Digestive diseases`
-5. `Neurological disorders`
-6. `Mental disorders`
-7. `Substance use disorders`
-8. `Diabetes and kidney diseases`
-9. `Respiratory infections and tuberculosis`
-10. `Enteric infections`
-11. `Neglected tropical diseases and malaria`
-12. `Maternal and neonatal disorders`
-13. `Nutritional deficiencies`
-14. `Musculoskeletal disorders`
-15. `Self-harm and interpersonal violence`
+The raw and processed data directories are ignored by Git. The supplied file is therefore not included in the repository or a cloud deployment. The app can use it locally when present, or accept an authorized upload.
 
----
+## Reproducible query dimensions
 
-## 4. Source File Schema & Transformation Protocol
+For a comparable extract, use IHME GBD Results Tool settings matching the following:
 
-### Expected Raw Long-Format Schema
-When downloaded from the GBD Results Tool, the CSV has the following standardized columns:
-- `measure_id`, `measure_name` (e.g. `DALYs (Disability-Adjusted Life Years)`)
-- `location_id`, `location_name` (e.g. `France`, `Japan`, `Nigeria`)
-- `sex_id`, `sex_name` (e.g. `Both`)
-- `age_id`, `age_name` (e.g. `Age-standardized`)
-- `cause_id`, `cause_name` (e.g. `Cardiovascular diseases`)
-- `metric_id`, `metric_name` (e.g. `Rate`)
-- `year` (e.g. `2021` or `2023`)
-- `val` (Point estimate: age-standardized DALYs per 100,000)
-- `upper` (95% upper uncertainty interval)
-- `lower` (95% lower uncertainty interval)
+| Dimension | Selection |
+|---|---|
+| Context | Causes |
+| Measure | DALYs |
+| Metric | Rate |
+| Age | Age-standardized |
+| Sex | Both |
+| Year | Selected explicitly in the app; the supplied extract is 2023 |
+| Location | Country and territory observations; exclude global/regional aggregates |
+| Cause | The 15 cause categories listed in the [feature dictionary](feature_dictionary.md) |
 
-### Transformation Steps into Wide Clustering Contract
-1. **Filter Verification:** Filter strictly for `measure_name == 'DALYs (Disability-Adjusted Life Years)'`, `metric_name == 'Rate'`, `sex_name == 'Both'`, `age_name == 'Age-standardized'`, and target `year`.
-2. **Location Hygiene:** Exclude global, regional, and subnational aggregates (e.g. `Global`, `High-income North America`, `WHO Western Pacific Region`) to retain sovereign countries and recognized territories.
-3. **Uniqueness Audit:** Verify that `(location_name, cause_name)` pairs are strictly unique. Reject duplicates without silent averaging.
-4. **Reshaping:** Pivot the data so each row represents one `location_name` (labeled `country`) and each column represents a selected `cause_name` containing the `val` point estimate.
-5. **Contract Validation:** Pass the wide DataFrame to `validate_dataset(df)` and `prepare_features(df, features)` to ensure row-level missingness auditing and standard scaling.
+Rates are used to compare burden relative to population size; age-standardization reduces differences attributable to national age structures. It does not remove all differences in measurement, estimation or source-data completeness.
 
----
+## Ingestion and transformation
 
-## 5. Storage and Data Hygiene Rules
-- Original downloaded files must be stored in `project28_starter/data/raw/` (excluded from version control via `.gitignore`).
-- Transformed wide-format datasets must be stored in `project28_starter/data/processed/`.
-- No proprietary or restricted raw data will be committed to public Git repositories.
+The GBD upload path expects `location_name`, `cause_name`, and `val`. If present, `measure_name`, `metric_name`, `sex_name`, and `age_name` are filtered to DALYs, Rate, Both and Age-standardized respectively. When `year` is present, the user selects one year in the dashboard. The source must have at least three resulting country/territory observations and two cause features.
 
-## Dataset citation
+Known global, regional, super-regional and WHO aggregate location names are excluded by `src/gbd_transform.py`. Each `(location_name, cause_name)` pair must be unique after filtering; duplicate estimates are rejected rather than silently aggregated. `val` is converted to numeric, and invalid values are treated as missing for the transparent preprocessing stage.
 
-Global Burden of Disease Collaborative Network.
-Global Burden of Disease Study 2023 (GBD 2023) Results.
-Seattle, United States: Institute for Health Metrics and Evaluation (IHME), 2024.
-Available from: https://vizhub.healthdata.org/gbd-results/
+The transformation pivots `location_name` into the `country` identifier and `cause_name` into feature columns. Data then passes through country identifier validation, row-level missingness auditing, median imputation of retained observations and standard scaling.
+
+## Limitations and responsible use
+
+- GBD indicators are modeled estimates and may include uncertainty not represented in the point-estimate clustering matrix.
+- The download date and account-specific terms were not included with the supplied file.
+- Filtering known aggregates by name does not assert that every possible custom or newly named location is a country; inspect uploaded sources and output locations before analysis.
+- Country-level estimates mask internal geographic, socioeconomic and demographic differences.
+- Cluster membership describes patterns in the selected features and must not be interpreted as causality, diagnosis, country ranking or policy-effectiveness evidence.
