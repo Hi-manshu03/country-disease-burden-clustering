@@ -50,16 +50,26 @@ def _forget_dataset() -> None:
         "source_content_hash",
     ):
         st.session_state.pop(key, None)
-
-
+        
+        
 css_path = PROJECT_DIR / "assets" / "style.css"
+
 if css_path.is_file():
-    base_url_path = str(st.get_option("server.baseUrlPath") or "").strip("/")
-    static_url = f"/{base_url_path}/app/static/dashboard-bg.png" if base_url_path else "/app/static/dashboard-bg.png"
-    css = css_path.read_text(encoding="utf-8").replace("dashboard-bg.png", static_url)
+    background_image_url = (
+        "https://raw.githubusercontent.com/"
+        "Hi-manshu03/country-disease-burden-clustering/"
+        "main/static/dashboard-bg.png"
+    )
+
+    css = css_path.read_text(encoding="utf-8")
+    css = css.replace("dashboard-bg.png", background_image_url)
+
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 else:
-    st.warning("Custom stylesheet not found; the dashboard is using Streamlit's dark theme.")
+    st.warning(
+        "Custom stylesheet not found; "
+        "the dashboard is using Streamlit's dark theme."
+    )
 
 navigation_sections = [
         "Overview",
